@@ -1,0 +1,16 @@
+.code {
+    font-family: monospace;
+    white-space: pre;
+}
+
+.red {
+    background-color: #ff9999;
+}
+
+.green {
+    background-color: #99ff99;
+}
+
+.test-result {
+    padding: 0.7em;
+}
