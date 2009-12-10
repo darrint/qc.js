@@ -11,6 +11,10 @@ function declare(name, gens, body) {
     return theProp;
 }
 
+function resetProps() {
+    allProps = [];
+}
+
 function Prop(name, gens, body) {
     this.name = name;
     this.gens = gens;
