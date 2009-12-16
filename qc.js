@@ -112,11 +112,14 @@ function runProp(config, prop) {
 	    prop.body.apply(prop, [testCase].concat(args));
             counts.incPass();
 	}
-	catch (e if e == "AssertFailed") {
-	    return new Fail(prop, counts, args);
-	}
-	catch (e if e == "InvalidCase") {
-	    counts.incInvalid();
+	catch (e) {
+	    if (e == "AssertFailed") {
+		return new Fail(prop, counts, args);
+	    } else if (e == "InvalidCase") {
+		counts.incInvalid();
+	    } else {
+		throw(e);
+	    }
 	}
 	size += 1;
     }
