@@ -180,6 +180,10 @@ function randRange(a, b) {
     return randWhole(b - a) + a;
 }
 
+function randFloatUnit() {
+    return Math.random();
+}
+
 function justSize() {
     return function(size) {
         return size;
@@ -218,3 +222,8 @@ function arbList(innerGen) {
     };
 }
 
+function arbFloatUnit() {
+    return function(size) {
+	return randFloatUnit();
+    };
+}

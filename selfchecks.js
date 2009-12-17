@@ -70,3 +70,10 @@ declare("randRange equal", [arbInt()],
             c.assert(a == result);
         });
 
+declare("randFloatUnit", [],
+	function(c) {
+	    var result = randFloatUnit();
+	    c.noteArg(result);
+	    c.assert(result >= 0);
+	    c.assert(result < 1);
+	});
