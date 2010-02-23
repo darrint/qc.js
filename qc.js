@@ -315,7 +315,7 @@ function arbSelect(/** generators... */) {
     }
 
     return {
-        arg: function (size) {
+        arb: function (size) {
                 return genvalue(getGenerator(), size);
             },
         shrink: null
