@@ -17,11 +17,19 @@ function Invalid(prop, counts) {
     this.name = prop.name;
 }
 
+Invalid.prototype.toString = function () {
+    return "Invalid (" + this.name + ") counts=" + this.counts;
+}
+
 function Pass(prop, counts) {
     this.status = "pass";
     this.prop = prop;
     this.counts = counts;
     this.name = prop.name;
+}
+
+Pass.prototype.toString = function () {
+    return "Pass (" + this.name + ") counts=" + this.counts;
 }
 
 function Fail(prop, counts, failedCase) {
@@ -32,6 +40,36 @@ function Fail(prop, counts, failedCase) {
     this.name = prop.name;
 }
 
+Fail.prototype.toString = function () {
+    return "Fail (" + this.name + ") counts=" + this.counts + "\n" +
+           "    failedCase: " + this.failedCase;
+}
+
+function Counts(pass, invalid, classes) {
+    this.pass = pass;
+    this.invalid = invalid;
+    this.classes = classes;
+}
+
+Counts.prototype.incInvalid = function () { 
+    this.invalid += 1; 
+};
+
+Counts.prototype.incPass = function () { 
+    this.pass += 1; 
+};
+
+Counts.prototype.newResult = function (prop) {
+    if (this.pass > 0) {
+        return new Pass(prop, this);
+    } else {
+        return new Invalid(prop, this);
+    }
+};
+
+Counts.prototype.toString = function () {
+    return "(pass=" + this.pass + ", invalid=" + this.invalid + ")";
+}
 
 function declare(name, gens, body) {
     var theProp = new Prop(name, gens, body);
@@ -93,27 +131,6 @@ Config.prototype.needsWork = function (count) {
         count.pass < this.maxPass;
 };
 
-function Counts(pass, invalid, classes) {
-    this.pass = pass;
-    this.invalid = invalid;
-    this.classes = classes;
-}
-
-Counts.prototype.incInvalid = function () { 
-    this.invalid += 1; 
-};
-
-Counts.prototype.incPass = function () { 
-    this.pass += 1; 
-};
-
-Counts.prototype.newResult = function (prop) {
-    if (this.pass > 0) {
-        return new Pass(prop, this);
-    } else {
-        return new Invalid(prop, this);
-    }
-};
 
 function runProp(config, prop) {
     var counts = new Counts(0, 0, {});
@@ -198,10 +215,10 @@ FBCListener.prototype.warn = function (str) {
 function RhinoListener() {}
 RhinoListener.prototype = new ConsoleListener();
 RhinoListener.prototype.log = function (str) { 
-    print(str + ""); 
+    print(str.toString()); 
 };
 RhinoListener.prototype.warn = function (str) { 
-    print(str + ""); 
+    print(str.toString()); 
 };
 
 // some starter generators and support utilities.
@@ -330,4 +347,5 @@ function arbNullOr(otherGen) {
 var arbFloatUnit = {
     arb: randFloatUnit
 };
+
 
