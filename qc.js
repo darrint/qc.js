@@ -10,19 +10,21 @@ function Prop(name, gens, body) {
     this.body = body;
 }
 
-function Invalid(prop, counts) {
+function Invalid(prop, counts, tags) {
     this.status = "invalid";
     this.prop = prop;
     this.counts = counts;
     this.name = prop.name;
+    this.tags = tags;
 }
 
 Invalid.prototype.toString = function () {
     return "Invalid (" + this.name + ") counts=" + this.counts;
 }
 
-function Pass(prop, counts) {
+function Pass(prop, counts, tags) {
     this.status = "pass";
+    this.tags = tags;
     this.prop = prop;
     this.counts = counts;
     this.name = prop.name;
@@ -32,8 +34,9 @@ Pass.prototype.toString = function () {
     return "Pass (" + this.name + ") counts=" + this.counts;
 }
 
-function Fail(prop, counts, failedCase) {
+function Fail(prop, counts, failedCase, tags) {
     this.status = "fail";
+    this.tags = tags;
     this.prop = prop;
     this.counts = counts;
     this.failedCase = failedCase;
@@ -41,8 +44,19 @@ function Fail(prop, counts, failedCase) {
 }
 
 Fail.prototype.toString = function () {
-    return "Fail (" + this.name + ") counts=" + this.counts + "\n" +
-           "    failedCase: " + this.failedCase;
+    function tagstr(tags) {
+        if(!tags || tags.length === 0) return "";
+
+        var str = "(tags: " + tags[0];
+        for(var i = 1; i < tags.length; i++) {
+            str += ", " + tags[i];
+        }
+        return str + ")";
+    }
+
+    return this.name + tagstr(this.tags) +
+           " failed with: counts=" + this.counts + 
+           " failedCase: " + this.failedCase;
 }
 
 function Counts(pass, invalid, classes) {
@@ -59,11 +73,11 @@ Counts.prototype.incPass = function () {
     this.pass += 1; 
 };
 
-Counts.prototype.newResult = function (prop) {
+Counts.prototype.newResult = function (prop, tags) {
     if (this.pass > 0) {
-        return new Pass(prop, this);
+        return new Pass(prop, this, tags);
     } else {
-        return new Invalid(prop, this);
+        return new Invalid(prop, this, tags);
     }
 };
 
@@ -100,6 +114,7 @@ Prop.prototype.generateArgs = function (size) {
 
 function Case(args) {
     this.classes = [];
+    this.tags = [];
     this.args = args;
 }
 
@@ -115,7 +130,11 @@ Case.prototype.guard = function (bool) {
     }
 };
 
-Case.prototype.classify = function (tag) {};
+Case.prototype.classify = function (bool,tag) {
+    if(bool) {
+        this.tags.push(tag);
+    }
+};
 
 Case.prototype.noteArg = function (arg) {
     this.args.push(arg);
@@ -135,6 +154,9 @@ Config.prototype.needsWork = function (count) {
 function runProp(config, prop) {
     var counts = new Counts(0, 0, {});
     var size = 0;
+
+    var tags = {};
+
     while (config.needsWork(counts)) {
         var args = prop.generateArgs(size);
         var testCase = new Case(args);
@@ -144,7 +166,7 @@ function runProp(config, prop) {
         }
         catch (e) {
             if (e === "AssertFailed") {
-                return new Fail(prop, counts, args);
+                return new Fail(prop, counts, args, testCase.tags);
             } else if (e === "InvalidCase") {
                 counts.incInvalid();
             } else {
@@ -152,8 +174,17 @@ function runProp(config, prop) {
             }
         }
         size += 1;
+        for(var i = 0; i < testCase.tags.length; i++) {
+            var tag = testCase.tags[i];
+            if (!tags[tag]) {
+                tags[tag] = 1;
+            } else {
+                tags[tag] += 1;
+            }
+        }
     }
-    return counts.newResult(prop);
+
+    return counts.newResult(prop, tags);
 }
 
 function runAllProps(config, listener) {
