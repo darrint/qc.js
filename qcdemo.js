@@ -2,11 +2,9 @@
 
 // tiny incomplete demo of how to use...
 
-function arbWholeNumList() {
-    return arbList(arbWholeNum.arb);
-}
+var arbWholeNumList = arbArray(arbWholeNum);
 
-declare("reverse", [arbWholeNumList(), arbWholeNumList()],
+declare("reverse", [arbWholeNumList, arbWholeNumList],
         function(c, x, y) {
             var z = x.concat(y);
             x.reverse();
