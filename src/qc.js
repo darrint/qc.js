@@ -84,37 +84,40 @@ function Prop(name, gens, body) {
     this.body = body;
 }
 
-function Invalid(prop, counts, tags) {
+function Invalid(prop, counts, tags, distr) {
     this.status = "invalid";
     this.prop = prop;
     this.counts = counts;
     this.name = prop.name;
     this.tags = tags;
+    this.distr = distr;
 }
 
 Invalid.prototype.toString = function () {
     return "Invalid (" + this.name + ") counts=" + this.counts;
 }
 
-function Pass(prop, counts, tags) {
+function Pass(prop, counts, tags, distr) {
     this.status = "pass";
     this.tags = tags;
     this.prop = prop;
     this.counts = counts;
     this.name = prop.name;
+    this.distr = distr;
 }
 
 Pass.prototype.toString = function () {
     return "Pass (" + this.name + ") counts=" + this.counts;
 }
 
-function Fail(prop, counts, failedCase, tags) {
+function Fail(prop, counts, failedCase, tags, distr) {
     this.status = "fail";
     this.tags = tags;
     this.prop = prop;
     this.counts = counts;
     this.failedCase = failedCase;
     this.name = prop.name;
+    this.distr = distr;
 }
 
 Fail.prototype.toString = function () {
@@ -133,10 +136,9 @@ Fail.prototype.toString = function () {
            " failedCase: " + this.failedCase;
 }
 
-function Counts(pass, invalid, classes) {
+function Counts(pass, invalid) {
     this.pass = pass;
     this.invalid = invalid;
-    this.classes = classes;
 }
 
 Counts.prototype.incInvalid = function () { 
@@ -147,11 +149,11 @@ Counts.prototype.incPass = function () {
     this.pass += 1; 
 };
 
-Counts.prototype.newResult = function (prop, tags) {
+Counts.prototype.newResult = function (prop, tags, distr) {
     if (this.pass > 0) {
-        return new Pass(prop, this, tags);
+        return new Pass(prop, this, tags, distr);
     } else {
-        return new Invalid(prop, this, tags);
+        return new Invalid(prop, this, tags, distr);
     }
 };
 
@@ -187,8 +189,8 @@ Prop.prototype.generateArgs = function (size) {
 };
 
 function Case(args) {
-    this.classes = [];
     this.tags = [];
+    this.collected = [];
     this.args = args;
 }
 
@@ -210,6 +212,19 @@ Case.prototype.classify = function (bool,tag) {
     }
 };
 
+Case.prototype.collect = function(value) {
+    var found = false;
+    for(var i = 0; i < this.collected.length; i++) {
+        if (this.collected[i][1] == value) {
+            this.collected[i][0] += 1;
+            found = true;
+        }
+    }
+    if(!found) {
+        this.collected.push([1, value]);
+    }
+}
+
 Case.prototype.noteArg = function (arg) {
     this.args.push(arg);
 };
@@ -224,12 +239,12 @@ Config.prototype.needsWork = function (count) {
         count.pass < this.maxPass;
 };
 
-
 function runProp(config, prop) {
-    var counts = new Counts(0, 0, {});
+    var counts = new Counts(0, 0);
     var size = 0;
 
     var tags = {};
+    var collected = [];
 
     while (config.needsWork(counts)) {
         var args = prop.generateArgs(size);
@@ -240,7 +255,11 @@ function runProp(config, prop) {
         }
         catch (e) {
             if (e === "AssertFailed") {
-                return new Fail(prop, counts, args, testCase.tags);
+                var dist = !testCase.collected || 
+                            testCase.collected.length == 0 ?  null : 
+                                new Distribution(testCase.collected);
+
+                return new Fail(prop, counts, args, testCase.tags, dist);
             } else if (e === "InvalidCase") {
                 counts.incInvalid();
             } else {
@@ -248,6 +267,7 @@ function runProp(config, prop) {
             }
         }
         size += 1;
+        collected = collected.concat(testCase.collected);
         for(var i = 0; i < testCase.tags.length; i++) {
             var tag = testCase.tags[i];
             if (!tags[tag]) {
@@ -258,7 +278,15 @@ function runProp(config, prop) {
         }
     }
 
-    return counts.newResult(prop, tags);
+    if(collected.length > 0)
+    var dist = !collected || collected.length == 0 ? null :
+                new Distribution(collected);
+    var tagsTmp = new Array();
+    for(var tag in tags) {
+        tagsTmp.push([tags[tag], tag]);
+    }
+
+    return counts.newResult(prop, tagsTmp, dist);
 }
 
 function runAllProps(config, listener) {
@@ -286,13 +314,15 @@ function runAllProps(config, listener) {
 }
 
 // generic 'console' listener. When overwriting implement log and warn
-function ConsoleListener() {}
+function ConsoleListener(maxCollected) {
+    this.maxCollected = maxCollected || -1;
+}
 
 ConsoleListener.prototype.noteResult = function (result) {
     var status_string = result.status + ": " + result.name;
     if (result.status === "pass") {
-        this.log(status_string);
-        this.log(result.counts);
+        this.log(result);
+        //this.log(result.counts);
     } else {
         this.warn(status_string);
         this.log(result);
@@ -301,6 +331,39 @@ ConsoleListener.prototype.noteResult = function (result) {
         this.log("Failed case:");
         this.log(result.failedCase);
     }
+
+    //print tags
+    var tags = result.tags;
+    if(tags && tags.length > 0) {
+        this.log('tags:');
+        for(var i = 0; i < tags.length;i++) {
+            var tag = tags[i];
+            if(tag instanceof Array) {
+                this.log(tag[0] + " : " + tag[1]);
+            } else {
+                this.log(tag);
+            }
+        }
+    }
+
+    //print histogram statistics if present
+    if(this.maxCollected != 0 && result.distr && result.distr.length > 0) {
+        var distr = result.distr;
+        distr = distr.data.slice(
+            0, this.maxCollected == -1 ? distr.data.length :
+               Math.min(distr.data.length, this.maxCollected));
+
+        distr.sort(function (a, b) {
+            return -1 * (a[0] - b[0]);
+        });
+
+        this.log('collected:');
+        for(var i = 0; i < distr.length; i++) {
+            var d = distr[i];
+            this.log(d[0] * 100 + "% : " + d[1]);
+        }
+    }
+
 };
 
 ConsoleListener.prototype.done = function (result) {
@@ -308,7 +371,9 @@ ConsoleListener.prototype.done = function (result) {
 };
 
 // A listener which works with Firebug's console.
-function FBCListener() { }
+function FBCListener(maxCollected) { 
+    this.maxCollected = maxCollected || 0;
+}
 FBCListener.prototype = new ConsoleListener();
 FBCListener.prototype.log = function (str) { 
     console.log(str); 
@@ -317,7 +382,9 @@ FBCListener.prototype.warn = function (str) {
     console.warn(str); 
 };
 
-function RhinoListener() {}
+function RhinoListener(maxCollected) {
+    this.maxCollected = maxCollected || 10;
+}
 RhinoListener.prototype = new ConsoleListener();
 RhinoListener.prototype.log = function (str) { 
     print(str.toString()); 
