@@ -25,10 +25,10 @@ plus some modifications:
 - added runrhino.js to tests so one can run selfcheck from command line
   by 'rhino runrhino.js'
 - added toString() methods to Pass, Fail and Counts for error reporting
+- added support for shrinking (completely untested as of yet)
 
 TODO:
 =====
 - start some kind of documentation
 - add jsdoc toolkit markup for API documentation
-- add shrinking
 
