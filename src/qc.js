@@ -4,6 +4,80 @@
 
 var allProps = [];
 
+function Distribution(d) {
+    var data = [];
+    function incBy(key, x) {
+        var found = false;
+        for(var i = 0; i < data.length; i++) {
+            if(data[i][1] == key) {
+                data[i][0] += x;
+                found = true;
+            }
+        }
+        if (!found) { 
+            data.push([x, key]);
+        }
+    }
+
+    for(var j = 0; j < d.length; j++) {
+        incBy(d[j][1], d[j][0]);
+    }
+
+    this.data = data;
+    this.normalize();
+    this.length = this.data.length;
+};
+
+Distribution.prototype.normalize = function () {
+    var sum = 0;
+    for(var i = 0; i < this.data.length; i++) {
+        sum += this.data[i][0];
+    }
+    for(var i = 0; i < this.data.length; i++) {
+        this.data[i][0] /= sum;
+    }
+};
+
+Distribution.prototype.probability = function(x) {
+    for(var i = 0; i < this.data.length; i++) {
+        if(this.data[i][1] == x) {
+            return this.data[i][0];
+        }
+    }
+    return 0;
+};
+
+Distribution.prototype.mostProbable = function () {
+    var max = 0;
+    var ret = null;
+    for(var i = 0; i < this.data.length; i++) {
+        if(this.data[i][0] > max) {
+            max = this.data[i][0];
+            ret = this.data[i][1];
+        }
+    }
+    return ret;
+};
+
+Distribution.prototype.pick = function () {
+    var r = Math.random();
+    var s = 0;
+    for (var i = 0; i < this.data.length; i++) {
+        s += this.data[i][0];
+        if(r < s) {
+            return this.data[i][1];
+        }
+    }
+};
+
+Distribution.uniform = function(data) {
+    var tmp = new Array(data.length);
+    for(var i = 0; i < data.length; i++) {
+        tmp.push([1, data]);
+    }
+    return new Distribution(tmp);
+};
+
 function Prop(name, gens, body) {
     this.name = name;
     this.gens = gens;
