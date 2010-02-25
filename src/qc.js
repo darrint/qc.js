@@ -106,6 +106,7 @@ Prop.prototype.generateShrinkedArgs = function(size, args) {
     //test if at least on generator supports shrinking
     var shrinkingSupported = false;
     for (var i = 0; i < this.gens.length; i++) {
+        var gen = this.gens[i];
         if(!(gen instanceof Function) && 
            !(gen['shrink'] === null || gen['shrink'] === undefined)) 
         {
@@ -121,9 +122,9 @@ Prop.prototype.generateShrinkedArgs = function(size, args) {
     // create shrinked args for each argument 
     var shrinked = [];
     for (var i = 0; i < this.gens.length; i++) {
-        if((gen instanceof Function) ||
-           !(gen['shrink'] === null || gen['shrink'] === undefined ||
-             (!gen['shrink'] instanceof Function))) 
+        var gen = this.gens[i];
+        if((gen instanceof Function) || gen['shrink'] === undefined ||
+           gen['shrink'] === null || !(gen['shrink'] instanceof Function))
         {
             shrinked.push([args[i]]);
         } else {
@@ -305,7 +306,7 @@ Case.prototype.noteArg = function (arg) {
 function Config(pass, invalid, maxShrink) {
     this.maxPass = pass;
     this.maxInvalid = invalid;
-    this.maxShrink = maxShrink || 2;
+    this.maxShrink = maxShrink || 3;
 }
 
 Config.prototype.needsWork = function (count) {
@@ -315,12 +316,13 @@ Config.prototype.needsWork = function (count) {
 
 
 function shrinkLoop(config, prop, size, args) {
-    var iterations = 0;
     var failedArgs = [args];
     var shrinkedArgs = [];
 
-    while(iterations < config.maxShrink) {
+    for(var loop = 0; loop < config.maxShrink; loop++) {
         // create shrinked argument lists from failed arguments
+
+        shrinkedArgs = [];
         for(var i = 0; i < failedArgs.length; i++) {
             shrinkedArgs = shrinkedArgs.concat(
                 prop.generateShrinkedArgs(size, failedArgs[i]));
@@ -339,7 +341,7 @@ function shrinkLoop(config, prop, size, args) {
             } catch (e) {
                 if( e === 'InvalidCase') {
                 } else if (e === 'AssertFailed') {
-                    if(iterations === config.maxShrink - 1) {
+                    if(loop === config.maxShrink - 1) {
                         return shrinkedArgs[i];
                     } else {
                         failedArgs.push(shrinkedArgs[i]);

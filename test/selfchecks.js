@@ -85,3 +85,21 @@ declare("collectTest", [arbArray(arbInt)],
         c.collect(a.length);
     });
 
+var testArr = [1,2,0,1,0];
+var testArb = {
+    arb: function(){
+        return testArr;
+    },
+    shrink: function(s,a) {
+        //print('input: ' + a);
+        var r = a.slice(1);
+        //print('ret: ' + r);
+        return r.length == 0 ? [] : [r];
+    }
+}
+
+declare("shrinkTest... must FAIL", [testArb],
+        function(c){
+            c.assert(false);
+        });
+
