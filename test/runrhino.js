@@ -1,4 +1,4 @@
 load('../src/qc.js')
 load('selfchecks.js')
-runAllProps(new Config(10,10), new RhinoListener())
+runAllProps(new Config(100,1000), new RhinoListener())
 
