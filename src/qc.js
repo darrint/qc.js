@@ -73,7 +73,7 @@ Distribution.prototype.pick = function () {
 Distribution.uniform = function(data) {
     var tmp = new Array(data.length);
     for(var i = 0; i < data.length; i++) {
-        tmp.push([1, data]);
+        tmp.push([1, data[i]]);
     }
     return new Distribution(tmp);
 };
