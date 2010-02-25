@@ -12,6 +12,7 @@ function Distribution(d) {
             if(data[i][1] == key) {
                 data[i][0] += x;
                 found = true;
+                break;
             }
         }
         if (!found) { 
@@ -84,6 +85,87 @@ function Prop(name, gens, body) {
     this.body = body;
 }
 
+function genvalue(gen, size) {
+    if (!(gen instanceof Function)) {
+        gen = gen.arb;
+    }
+    return gen(size);
+}
+
+Prop.prototype.generateArgs = function (size) {
+    var i;
+    var args = [];
+    for (i = 0; i < this.gens.length; i += 1) {
+        var gen = this.gens[i];
+        args.push(genvalue(gen, size));
+    }
+    return args;
+};
+
+Prop.prototype.generateShrinkedArgs = function(size, args) {
+    //test if at least on generator supports shrinking
+    var shrinkingSupported = false;
+    for (var i = 0; i < this.gens.length; i++) {
+        if(!(gen instanceof Function) && 
+           !(gen['shrink'] === null || gen['shrink'] === undefined)) 
+        {
+            shrinkingSupported = true;
+            break;
+        }
+    }
+
+    if(!shrinkingSupported) {
+        return [];
+    }
+
+    // create shrinked args for each argument 
+    var shrinked = [];
+    for (var i = 0; i < this.gens.length; i++) {
+        if((gen instanceof Function) ||
+           !(gen['shrink'] === null || gen['shrink'] === undefined ||
+             (!gen['shrink'] instanceof Function))) 
+        {
+            shrinked.push([args[i]]);
+        } else {
+            var tmp = gen.shrink(size, args[i]);
+            if(tmp === undefined || (tmp instanceof Array && tmp.length == 0)) {
+                shrinked.push([args[i]])
+            } else {
+                shrinked.push(tmp);
+            }
+        }
+    }
+
+    // create index list to draw lists of arguments from
+    var idxs = new Array(this.gens.length);
+    for (var i = 0; i < this.gens.length; i++) {
+        idxs[i] = 0;
+    }
+
+    // create list of shrinked arguments:
+    var newArgs = [];
+    while( idxs[0] < shrinked[0].length ) {
+        var tmp = new Array(shrinked.length);
+        var i = 0;
+        for (; i < shrinked.length; i++) {
+            tmp[i] = shrinked[i][idxs[i]];
+        }
+        newArgs.push(tmp);
+
+        // adjust all indices
+        while( (i--) > 0 ) {
+            idxs[i] += 1;
+            if(i != 0 && idxs[i] >= shrinked[i].length) {
+                idxs[i] = 0;
+            } else {
+                break;
+            }
+        }
+    }
+
+    return newArgs;
+}
+
 function Invalid(prop, counts, tags, distr) {
     this.status = "invalid";
     this.prop = prop;
@@ -110,12 +192,13 @@ Pass.prototype.toString = function () {
     return "Pass (" + this.name + ") counts=" + this.counts;
 }
 
-function Fail(prop, counts, failedCase, tags, distr) {
+function Fail(prop, counts, failedCase, shrinkedArgs, tags, distr) {
     this.status = "fail";
     this.tags = tags;
     this.prop = prop;
     this.counts = counts;
     this.failedCase = failedCase;
+    this.shrinkedArgs = shrinkedArgs;
     this.name = prop.name;
     this.distr = distr;
 }
@@ -131,9 +214,14 @@ Fail.prototype.toString = function () {
         return str + ")";
     }
 
+    function shrinkstr(arg) {
+        return arg == null ? "" : "\nminCase: " + arg;
+    }
+
     return this.name + tagstr(this.tags) +
            " failed with: counts=" + this.counts + 
-           " failedCase: " + this.failedCase;
+           " failedCase: " + this.failedCase +
+           shrinkstr(this.shrinkedArgs);
 }
 
 function Counts(pass, invalid) {
@@ -171,22 +259,6 @@ function resetProps() {
     allProps = [];
 }
 
-function genvalue(gen, size) {
-    if (!(gen instanceof Function)) {
-        gen = gen.arb;
-    }
-    return gen(size);
-}
-
-Prop.prototype.generateArgs = function (size) {
-    var i;
-    var args = [];
-    for (i = 0; i < this.gens.length; i += 1) {
-        var gen = this.gens[i];
-        args.push(genvalue(gen, size));
-    }
-    return args;
-};
 
 function Case(args) {
     this.tags = [];
@@ -218,6 +290,7 @@ Case.prototype.collect = function(value) {
         if (this.collected[i][1] == value) {
             this.collected[i][0] += 1;
             found = true;
+            break;
         }
     }
     if(!found) {
@@ -229,15 +302,57 @@ Case.prototype.noteArg = function (arg) {
     this.args.push(arg);
 };
 
-function Config(pass, invalid) {
+function Config(pass, invalid, maxShrink) {
     this.maxPass = pass;
     this.maxInvalid = invalid;
+    this.maxShrink = maxShrink || 2;
 }
 
 Config.prototype.needsWork = function (count) {
     return count.invalid < this.maxInvalid &&
         count.pass < this.maxPass;
 };
+
+
+function shrinkLoop(config, prop, size, args) {
+    var iterations = 0;
+    var failedArgs = [args];
+    var shrinkedArgs = [];
+
+    while(iterations < config.maxShrink) {
+        // create shrinked argument lists from failed arguments
+        for(var i = 0; i < failedArgs.length; i++) {
+            shrinkedArgs = shrinkedArgs.concat(
+                prop.generateShrinkedArgs(size, failedArgs[i]));
+        }
+
+        if(shrinkedArgs.length === 0) {
+            return failedArgs.length === 0 ? null : failedArgs[0];
+        }
+
+        // create new failed arguments from shrinked ones by running the property
+        failedArgs = [];
+        for(var i = 0; i < shrinkedArgs.length; i++) {
+            try {
+                var testCase = new Case(shrinkedArgs[i]);
+                prop.body.apply(prop, [testCase].concat(shrinkedArgs[i]));
+            } catch (e) {
+                if( e === 'InvalidCase') {
+                } else if (e === 'AssertFailed') {
+                    if(iterations === config.maxShrink - 1) {
+                        return shrinkedArgs[i];
+                    } else {
+                        failedArgs.push(shrinkedArgs[i]);
+                    }
+                } else {
+                    throw e;
+                }
+            }
+        }
+    }
+
+    return failedArgs.length === 0 ? null : failedArgs[0];
+}
 
 function runProp(config, prop) {
     var counts = new Counts(0, 0);
@@ -259,7 +374,8 @@ function runProp(config, prop) {
                             testCase.collected.length == 0 ?  null : 
                                 new Distribution(testCase.collected);
 
-                return new Fail(prop, counts, args, testCase.tags, dist);
+                var shrinkedArgs = shrinkLoop(config, prop, size, args);
+                return new Fail(prop, counts, args, shrinkedArgs, testCase.tags, dist);
             } else if (e === "InvalidCase") {
                 counts.incInvalid();
             } else {
