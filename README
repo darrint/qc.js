@@ -1,0 +1,34 @@
+
+JS Quickcheck
+=============
+
+This is a fork from Darrin Thompsons Quickcheck for JavaScript (http://bitbucket.org/darrint/qc.js/)
+plus some modifications:
+
+- changed directory structure
+- added support for rhino by adding RhinoListener
+- created abstract class "ConsoleListener" the FireBug and Rhino reporting
+  classes inherit its functionality from
+- changed "Arbitrary" generators to be objects with
+  fields arb and shrink (to add shrinking support later).
+  "Arbitrary" generator functions as in Darrins Quickcheck are still allowed.
+- added genvalue to create next value from generator
+  (so functions or objects with field "arb" are supported)
+- added generator frequency taking a list of generators and select one 
+  depending on relative frequency
+- renamed arbList to arbArray
+- added arbSelect to uniformly select one of the given generators
+- added arbNull which will always return 'null'
+- added arbNullOr generator returning null or the given generators 
+  return value (probability for null is 0.1)
+- implemented 'classify' and 'collect' (see selfcheck.js for example)
+- added runrhino.js to tests so one can run selfcheck from command line
+  by 'rhino runrhino.js'
+- added toString() methods to Pass, Fail and Counts for error reporting
+
+TODO:
+=====
+- start some kind of documentation
+- add jsdoc toolkit markup for API documentation
+- add shrinking
+
