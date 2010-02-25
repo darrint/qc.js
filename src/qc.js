@@ -479,7 +479,14 @@ function arbSelect(/** generators... */) {
 
 
 function arbNullOr(otherGen) {
-    return arbSelect(otherGen, arbNull);
+    //return arbSelect(otherGen, arbNull);
+    var d = new Distribution([[10, arbNull], [90, otherGen]]);
+    return {
+        arb: function (size) {
+                return genvalue(d.pick(), size);
+            },
+        shrink: null
+    }
 }
 
 var arbFloatUnit = {
