@@ -329,27 +329,10 @@ RhinoListener.prototype.warn = function (str) {
 // some starter generators and support utilities.
 
 function frequency(/** functions */) {
-    var args = new Array(arguments.length);
-    var sum = 0;
-    for (var i = 0; i < arguments.length; i++) {
-        sum += arguments[i][0];
-    }
-
-    for (var i = 0; i < arguments.length; i++) {
-        args.push([arguments[i][0]/sum, arguments[i][1]]);
-    }
-
+    var d = new Distribution(arguments);
     return function () {
-        var r = randFloatUnit();
-        var s = 0;
-        for (var i = 0; i < args.length; i++) {
-            s += args[i][0];
-            if(r < s) {
-                return args[i][1];
-            }
-        }
-        return args[arg.length - 1][1];
-    };
+        return d.pick();
+    }
 }
 
 function randWhole(top) {
@@ -418,27 +401,10 @@ function arbArray(innerGen) {
 }
 
 function arbSelect(/** generators... */) {
-    var generators = arguments;
-
-    //draw the next generator by picking from uniform distribution
-    function getGenerator() {
-        var len = generators;
-        var probability = 1 / len;
-        var r = randFloatUnit();
-
-        var s = 0;
-        for(var i=0; i < len; i++) {
-            s += probability;
-            if (r < s) {
-                return generators[i];
-            }
-        }
-        return generators[len - 1]; //just in case, but should never happen
-    }
-
+    var d = Distribution.uniform(arguments);
     return {
         arb: function (size) {
-                return genvalue(getGenerator(), size);
+                return genvalue(d.pick(), size);
             },
         shrink: null
     };
@@ -452,5 +418,4 @@ function arbNullOr(otherGen) {
 var arbFloatUnit = {
     arb: randFloatUnit
 };
-
 
