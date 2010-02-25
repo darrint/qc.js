@@ -78,3 +78,10 @@ declare("randFloatUnit", [],
 	    c.assert(result >= 0);
 	    c.assert(result < 1);
 	});
+
+declare("collectTest", [arbArray(arbInt)],
+    function(c,a) {
+        c.classify(a.length == 0, "empty array");
+        c.collect(a.length);
+    });
+
