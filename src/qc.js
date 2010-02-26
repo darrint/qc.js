@@ -323,7 +323,7 @@ Case.prototype.noteArg = function (arg) {
 function Config(pass, invalid, maxShrink) {
     this.maxPass = pass;
     this.maxInvalid = invalid;
-    this.maxShrink = maxShrink || 3;
+    this.maxShrink = arguments.length < 3 ? 3 : maxShrink;
 }
 
 Config.prototype.needsWork = function (count) {
@@ -541,7 +541,7 @@ function choose(/** values */) {
     var d = Distribution.uniform(arguments);
     return function(){
         return d.pick();
-    }
+    };
 }
 
 function randWhole(top) {
@@ -629,7 +629,7 @@ var arbInt = {
 };
 
 var arbFloatUnit = {
-    arb: randFloatUnit
+    arb: randFloatUnit,
     shrink: function(size, x) {
         var ret = [];
         if(x < 0) ret.push(-x);
