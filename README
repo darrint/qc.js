@@ -12,8 +12,11 @@ JS Quickcheck Features
 - arbNullOr generator returning null or the given generators return
   value (probability for null is 0.1)
 - implemented 'classify' and 'collect' (see selfcheck.js for example)
-- runrhino.js to tests so one can run selfcheck from command line by
-  'rhino runrhino.js'
+- added runrhino.js to tests so one can run selfcheck from command line
+  by 'rhino runrhino.js'
+- added toString() methods to Pass, Fail and Counts for error reporting
+- added support for shrinking (mostly untested as of yet)
+- added shrinking functions to generators
 
 TODO:
 =====
