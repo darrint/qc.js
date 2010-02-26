@@ -591,7 +591,7 @@ function arbArray(innerGen) {
     };
 }
 
-function arbSelect(/** generators... */) {
+function arbChoose(/** generators... */) {
     var d = Distribution.uniform(arguments);
     return {
         arb: function (size) {
@@ -600,7 +600,6 @@ function arbSelect(/** generators... */) {
         shrink: null
     };
 }
-
 
 function arbNullOr(otherGen) {
     //return arbSelect(otherGen, arbNull);
