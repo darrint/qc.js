@@ -79,17 +79,17 @@ Distribution.uniform = function(data) {
     return new Distribution(tmp);
 };
 
-function Prop(name, gens, body) {
-    this.name = name;
-    this.gens = gens;
-    this.body = body;
-}
-
 function genvalue(gen, size) {
     if (!(gen instanceof Function)) {
         gen = gen.arb;
     }
     return gen(size);
+}
+
+function Prop(name, gens, body) {
+    this.name = name;
+    this.gens = gens;
+    this.body = body;
 }
 
 Prop.prototype.generateArgs = function (size) {
@@ -121,6 +121,7 @@ Prop.prototype.generateShrinkedArgs = function(size, args) {
 
     // create shrinked args for each argument 
     var shrinked = [];
+    var countShrinked = 0;
     for (var i = 0; i < this.gens.length; i++) {
         var gen = this.gens[i];
         if((gen instanceof Function) || gen['shrink'] === undefined ||
@@ -132,9 +133,14 @@ Prop.prototype.generateShrinkedArgs = function(size, args) {
             if(tmp === undefined || (tmp instanceof Array && tmp.length == 0)) {
                 shrinked.push([args[i]])
             } else {
+                countShrinked++;
                 shrinked.push(tmp);
             }
         }
+    }
+
+    if (countShrinked === 0) {
+        return [];
     }
 
     // create index list to draw lists of arguments from
