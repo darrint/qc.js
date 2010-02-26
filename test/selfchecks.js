@@ -103,3 +103,8 @@ declare("shrinkTest... must FAIL", [testArb],
             c.assert(false);
         });
 
+declare("expect Exception", [arbInt],
+        expectException(function(c,i) {
+            throw("test");
+        }));
+
