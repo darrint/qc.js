@@ -86,6 +86,17 @@ function genvalue(gen, size) {
     return gen(size);
 }
 
+function genshrinked(arb, size, arg) {
+    if(!arb || arb instanceof Function ||
+       arb['shrink'] === null || arb['shrink'] === undefined) 
+    {
+        return [];
+    }
+
+    var tmp = arb.shrink(size, arg);
+    return (tmp === null || tmp === undefined) ? [] : tmp;
+}
+
 function Prop(name, gens, body) {
     this.name = name;
     this.gens = gens;
@@ -526,6 +537,13 @@ function frequency(/** functions */) {
     }
 }
 
+function choose(/** values */) {
+    var d = Distribution.uniform(arguments);
+    return function(){
+        return d.pick();
+    }
+}
+
 function randWhole(top) {
     return Math.floor(Math.random() * top);
 }
@@ -549,15 +567,81 @@ var justSize = {
     shrink: null
 };
 
+function arbChoose(/** generators... */) {
+    var d = Distribution.uniform(arguments);
+    return {
+        arb: function (size) {
+                return genvalue(d.pick(), size);
+            },
+        shrink: null
+    };
+}
+
+var arbBool = {
+    arb: choose(false, true)
+};
+
+function arbNullOr(otherGen) {
+    //return arbSelect(otherGen, arbNull);
+    var d = new Distribution([[10, arbNull], [90, otherGen]]);
+    return {
+        arb: function (size) {
+                return genvalue(d.pick(), size);
+            },
+        shrink: function (size, a) {
+            if(a == null) {
+                return [];
+            } else {
+                return [null].concat(genshrinked(otherGen, size, a));
+            }
+        }
+    }
+}
+
 var arbWholeNum = {
     arb: randWhole,
-    shrink: null
+    shrink: function(size, x) {
+        var tmp = x;
+        var ret = [];
+        while(true) {
+            tmp = Math.floor(tmp / 2);
+            if(tmp == 0) break;
+            ret.push(x - tmp);
+        }
+        return ret;
+    }
 };
 
 var arbInt = {
     arb: randInt,
-    shrink: null
+    shrink: function(size, x) {
+        var tmp = x;
+        var ret = [];
+        if(x < 0) ret.push(-x);
+
+        while(true) {
+            tmp = Math.floor(tmp / 2);
+            if(tmp == 0) break;
+            ret.push(x - tmp);
+        }
+        return ret;
+    }
 };
+
+var arbFloatUnit = {
+    arb: randFloatUnit
+    shrink: function(size, x) {
+        var ret = [];
+        if(x < 0) ret.push(-x);
+        var tmp = Math.floor(x);
+        if(tmp != x) ret.push(tmp);
+        tmp = Math.ceil(x);
+        if(tmp != x) ret.push(tmp);
+
+        return ret;
+    }
+};
+
 
 var arbNull = {
     arb: function () { 
@@ -574,7 +658,30 @@ function arbRange(a, b) {
     };
 }
 
-function arbArray(innerGen) {
+
+function arrShrinkOne(size, arr) {
+    if (!arr || arr.length == 0) return [];
+    if (arr.length == 1) return [[]];
+
+    function copyAllBut(idx) {
+        var tmp = new Array(arr.length - 1);
+        for (var i = 0; i < arr.length; i++) {
+            if (i === idx) continue;
+            if (i < idx) tmp[i] = arr[i];
+            else tmp[i - 1] = arr[i];
+        }
+        return tmp;
+    }
+
+    var ret = new Array(arr.length);
+    for(var i = 0; i < arr.length; i++) {
+        ret[i] = copyAllBut(i);
+    }
+    return ret;
+}
+
+function arbArray(innerGen, shrinkStrategy) {
+    var shrinkFn = shrinkStrategy || arrShrinkOne;
     function gen(size) {
         var listSize = randWhole(size);
         var list = [];
@@ -585,34 +692,6 @@ function arbArray(innerGen) {
         return list;
     }
 
-    return {
-        arb: gen,
-        shrink: null
-    };
+    return { arb: gen, shrink: shrinkFn };
 }
-
-function arbChoose(/** generators... */) {
-    var d = Distribution.uniform(arguments);
-    return {
-        arb: function (size) {
-                return genvalue(d.pick(), size);
-            },
-        shrink: null
-    };
-}
-
-function arbNullOr(otherGen) {
-    //return arbSelect(otherGen, arbNull);
-    var d = new Distribution([[10, arbNull], [90, otherGen]]);
-    return {
-        arb: function (size) {
-                return genvalue(d.pick(), size);
-            },
-        shrink: null
-    }
-}
-
-var arbFloatUnit = {
-    arb: randFloatUnit
-};
 
