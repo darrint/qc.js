@@ -698,3 +698,18 @@ function arbArray(innerGen, shrinkStrategy) {
     return { arb: gen, shrink: shrinkFn };
 }
 
+function expectException(fn) {
+    return function(c){
+        try {
+            fn.apply(arguments);
+        } catch (e) {
+            if(e === 'AssertFailed' || e === 'InvalidCase') {
+                throw e;
+            }
+            c.assert(true);
+            return;
+        }
+        c.assert(false);
+    }
+}
+
