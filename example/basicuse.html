@@ -35,7 +35,7 @@ function intensify(n) {
     return n + 2;
 }
 
-declare("intensify grows by 2", [arbInt()],
+declare("intensify grows by 2", [arbInt],
         function(c, a) {
             var result = intensify(a);
             c.noteArg(result);
@@ -58,7 +58,7 @@ function intensify(n) {
     }
 }
 
-declare("intensify grows by 2", [arbInt()],
+declare("intensify grows by 2", [arbInt],
         function(c, a) {
             var result = intensify(a);
             c.noteArg(result);

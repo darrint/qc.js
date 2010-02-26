@@ -40,7 +40,6 @@ function literateRun(id) {
     var dest = $(id).after("<div>").next();
     dest.addClass("test-result");
     dest.addClass("green");
-    console.log(dest);
     runAllProps(new Config(100, 1000), new LiterateListener(dest));
 }
 
