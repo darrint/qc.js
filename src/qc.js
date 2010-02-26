@@ -620,8 +620,11 @@ var arbInt = {
         if(x < 0) ret.push(-x);
 
         while(true) {
-            tmp = Math.floor(tmp / 2);
+            tmp = tmp / 2;
+            if(tmp < 0) tmp = Math.ceil(tmp);
+            if(tmp > 0) tmp = Math.floor(tmp);
             if(tmp == 0) break;
+
             ret.push(x - tmp);
         }
         return ret;
