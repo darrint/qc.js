@@ -4,7 +4,7 @@ JS Quickcheck Features
 
 - Listener UI's for Firebug, Firebug Lite (cross browser), and Rhino 
 - Arbitrary generators are objects with fields arb and shrink (to add
-  shrinking support later).
+  shrinking support later. The field shrink is optional and interpreted as 'null' if not present).
 - Nice stable of generators available out of the box.
 - arbArray to generate an arbitrary JS array.
 - arbSelect to uniformly select one of the given generators
@@ -12,11 +12,11 @@ JS Quickcheck Features
 - arbNullOr generator returning null or the given generators return
   value (probability for null is 0.1)
 - implemented 'classify' and 'collect' (see selfcheck.js for example)
-- added runrhino.js to tests so one can run selfcheck from command line
-  by 'rhino runrhino.js'
-- added toString() methods to Pass, Fail and Counts for error reporting
-- added support for shrinking (mostly untested as of yet)
-- added shrinking functions to generators
+- implemented simple shrinking strategies for primitive types
+- arbArray has an optional second parameter setting its shrinking strategy 
+- runrhino.js to tests so one can run selfcheck from command line by
+  'rhino runrhino.js'
+- implemented expectException property modifier
 
 TODO:
 =====
