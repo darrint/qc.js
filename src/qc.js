@@ -40,7 +40,7 @@ function Distribution(d) {
 };
 
 /**
- * @ignore
+ * @private
  */
 Distribution.prototype.normalize = function () {
     var sum = 0;
@@ -238,6 +238,12 @@ Prop.prototype.generateShrinkedArgs = function(size, args) {
     return newArgs;
 }
 
+/**
+ * tests the property.
+ *
+ * @param {Config} config configuration to test property with
+ * @return depending on test result a Pass, Fail or Invalid object
+ */
 Prop.prototype.run = function (config) {
     var stats = new Stats();
     var size = 0;
@@ -361,32 +367,34 @@ function Stats() {
     this.invalid = 0;
 
     /**
+     * list of tags (created by calling Case.classify) with counts
      * @field
      */
     this.tags = [];
 
     /**
+     * Histogram of collected values (create by calling Case.collect)
      * @field
      */
     this.collected = null;
 }
 
 /**
- * @ignore
+ * @private
  */
 Stats.prototype.incInvalid = function () { 
     this.invalid += 1; 
 };
 
 /**
- * @ignore
+ * @private
  */
 Stats.prototype.incPass = function () { 
     this.pass += 1; 
 };
 
 /**
- * @ignore
+ * @private
  */
 Stats.prototype.addTags = function(ts) {
     for (var i = 0; i < ts.length; i++) {
@@ -405,7 +413,7 @@ Stats.prototype.addTags = function(ts) {
 }
 
 /**
- * @ignore
+ * @private
  */
 Stats.prototype.newResult = function (prop) {
     if (this.pass > 0) {
@@ -419,6 +427,16 @@ Stats.prototype.toString = function () {
     return "(pass=" + this.pass + ", invalid=" + this.invalid + ")";
 }
 
+/**
+ * Builds and registers a new property.
+ *
+ * @param name the property's name
+ * @param gens Array of generators (length == arity of body function).  Entry
+ *             at position i will drive the i-th argument of the body function. 
+ * @param body the properties testing function
+ *
+ * @return a new registered Property object.
+ */
 function declare(name, gens, body) {
     var theProp = new Prop(name, gens, body);
     allProps.push(theProp);
@@ -493,14 +511,19 @@ function Config(pass, invalid, maxShrink) {
 }
 
 /**
- * @ignore
+ * tests if runloop should continue testing a property based
+ * on test statistics to date.
+ *
+ * @private
  */
 Config.prototype.needsWork = function (count) {
     return count.invalid < this.maxInvalid &&
         count.pass < this.maxPass;
 };
 
-
+/**
+ * @private
+ */
 function shrinkLoop(config, prop, size, args) {
     var failedArgs = [args];
     var shrinkedArgs = [];
@@ -568,6 +591,11 @@ function runAllProps(config, listener) {
 
 // generic 'console' listener. When overwriting implement log and warn
 /**
+ * Abstract class for building 'console' based listeners.
+ * Subclasses MUST implement the function 'log' and 'warn'.
+ *
+ * @param maxCollected maximum number of collected elements to display in console
+ *
  * @class
  */
 function ConsoleListener(maxCollected) {
@@ -692,6 +720,9 @@ function randFloatUnit() {
     return Math.random();
 }
 
+/**
+ * @constant
+ */
 var justSize = {
     arb: function (size) { 
             return size; 
@@ -709,6 +740,9 @@ function arbChoose(/** generators... */) {
     };
 }
 
+/**
+ * @constant
+ */
 var arbBool = {
     arb: choose(false, true)
 };
@@ -730,6 +764,9 @@ function arbNullOr(otherGen) {
     }
 }
 
+/**
+ * @constant
+ */
 var arbWholeNum = {
     arb: randWhole,
     shrink: function(size, x) {
@@ -744,6 +781,9 @@ var arbWholeNum = {
     }
 };
 
+/**
+ * @constant
+ */
 var arbInt = {
     arb: randInt,
     shrink: function(size, x) {
@@ -763,6 +803,9 @@ var arbInt = {
     }
 };
 
+/**
+ * @constant
+ */
 var arbFloatUnit = {
     arb: randFloatUnit,
     shrink: function(size, x) {
@@ -777,7 +820,9 @@ var arbFloatUnit = {
     }
 };
 
-
+/**
+ * @constant
+ */
 var arbNull = {
     arb: function () { 
             return null; 
@@ -858,6 +903,9 @@ function failOnException(fn) {
     }
 }
 
+/**
+ * @constant
+ */
 var arbDate = {
     arb: function() { return new Date(); }
 }
@@ -877,11 +925,17 @@ function arbMod(a, fn) {
     }
 }
 
+/**
+ * @constant
+ */
 var arbChar = arbMod(arbChoose(arbRange(32,255)),
                      function(num) {
                          return String.fromCharCode(num);
                      });
 
+/**
+ * @constant
+ */
 var arbString = new function() {
     var a = arbArray(arbRange(32,255));
 
@@ -907,6 +961,9 @@ var arbString = new function() {
     return this;
 }
 
+/**
+ * @constant
+ */
 var arbUndef = arbConst(undefined);
 
 function arbUndefOr(opt) {
