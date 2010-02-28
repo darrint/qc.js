@@ -2,10 +2,20 @@
 
 // Tiny javascript quickcheck port.
 
+/**
+ * Array of all declared properties
+ */
 var allProps = [];
 
+/**
+ * Probability distributions.
+ *
+ * @class
+ */
 function Distribution(d) {
     var data = [];
+
+    /** @ignore */
     function incBy(key, x) {
         var found = false;
         for(var i = 0; i < data.length; i++) {
@@ -29,6 +39,9 @@ function Distribution(d) {
     this.length = this.data.length;
 };
 
+/**
+ * @ignore
+ */
 Distribution.prototype.normalize = function () {
     var sum = 0;
     for(var i = 0; i < this.data.length; i++) {
@@ -39,6 +52,12 @@ Distribution.prototype.normalize = function () {
     }
 };
 
+/**
+ * finds the probability of a given value in the distribution.
+ *
+ * @param x any value to find probability for
+ * @return the probability of x in the distribution
+ */
 Distribution.prototype.probability = function(x) {
     for(var i = 0; i < this.data.length; i++) {
         if(this.data[i][1] == x) {
@@ -48,6 +67,11 @@ Distribution.prototype.probability = function(x) {
     return 0;
 };
 
+/**
+ * finds the (first) object with the highest probability.
+ *
+ * @return object with highest probability
+ */
 Distribution.prototype.mostProbable = function () {
     var max = 0;
     var ret = null;
@@ -60,6 +84,11 @@ Distribution.prototype.mostProbable = function () {
     return ret;
 };
 
+/**
+ * randomly draws a values by its probability from the distribution.
+ *
+ * @return any value in the distribution
+ */
 Distribution.prototype.pick = function () {
     var r = Math.random();
     var s = 0;
@@ -71,6 +100,13 @@ Distribution.prototype.pick = function () {
     }
 };
 
+/**
+ * creates a new uniform distribution from an array of values.
+ *
+ * @param data an array of values
+ *
+ * @return a new Distribution object
+ */
 Distribution.uniform = function(data) {
     var tmp = new Array(data.length);
     for(var i = 0; i < data.length; i++) {
@@ -79,6 +115,16 @@ Distribution.uniform = function(data) {
     return new Distribution(tmp);
 };
 
+/**
+ * draws a new value from a generator. 
+ * A generator is either a function accepting a seed argument or an object
+ * with a method 'arb' accepting a seed argument.
+ *
+ * @param gen Function or Generator object with method 'arb'
+ * @param {Number} size seed argument
+ *
+ * @return new generated value
+ */
 function genvalue(gen, size) {
     if (!(gen instanceof Function)) {
         gen = gen.arb;
@@ -86,17 +132,35 @@ function genvalue(gen, size) {
     return gen(size);
 }
 
-function genshrinked(arb, size, arg) {
-    if(!arb || arb instanceof Function ||
-       arb['shrink'] === null || arb['shrink'] === undefined) 
+/**
+ * Uses the generators specific shrinking method to shrink a value the generator
+ * created before. If the generator is a function or has no method named 'shrink' 
+ * or the objects field 'shrink' is set to null, no shrinking will be done.
+ * If a shrinking method is defined, this method is called with the original seed and
+ * value the generator created. The shrinking method is supposed to return an Array of
+ * shrinked(!) values or null,undefined,[] if no shrinked values could have been created.
+ *
+ * @param gen the generator object
+ * @param size the initial seed used when creating a value
+ * @param arg the value the generator created for testing
+ *
+ * @return an array of shrinked values or [] if no shrinked values were generated.
+ *
+ */
+function genshrinked(gen, size, arg) {
+    if(!gen || gen instanceof Function ||
+       gen['shrink'] === null || gen['shrink'] === undefined) 
     {
         return [];
     }
 
-    var tmp = arb.shrink(size, arg);
+    var tmp = gen.shrink(size, arg);
     return (tmp === null || tmp === undefined) ? [] : tmp;
 }
 
+/**
+ * @class
+ */
 function Prop(name, gens, body) {
     this.name = name;
     this.gens = gens;
@@ -184,8 +248,17 @@ Prop.prototype.generateShrinkedArgs = function(size, args) {
     return newArgs;
 }
 
+Prop.prototype.run(config) {
+    runProp(config, this);
+}
+
+/**
+ * @class
+ */
 function Invalid(prop, counts, tags, distr) {
+    /** @field */
     this.status = "invalid";
+
     this.prop = prop;
     this.counts = counts;
     this.name = prop.name;
@@ -197,8 +270,13 @@ Invalid.prototype.toString = function () {
     return "Invalid (" + this.name + ") counts=" + this.counts;
 }
 
+/**
+ * @class
+ */
 function Pass(prop, counts, tags, distr) {
+    /** @field */
     this.status = "pass";
+
     this.tags = tags;
     this.prop = prop;
     this.counts = counts;
@@ -210,6 +288,9 @@ Pass.prototype.toString = function () {
     return "Pass (" + this.name + ") counts=" + this.counts;
 }
 
+/**
+ * @class
+ */
 function Fail(prop, counts, failedCase, shrinkedArgs, tags, distr) {
     this.status = "fail";
     this.tags = tags;
@@ -242,19 +323,42 @@ Fail.prototype.toString = function () {
            shrinkstr(this.shrinkedArgs);
 }
 
-function Counts(pass, invalid) {
-    this.pass = pass;
-    this.invalid = invalid;
+/**
+ * Counting class for collection a properties non failing pass/invalid runs.
+ *
+ * @class
+ */
+function Counts() {
+    /** 
+     * number of successful tests
+     * @field 
+     * */
+    this.pass = 0;
+
+    /** 
+     * number of failed tests
+     * @field 
+     * */
+    this.invalid = 0;
 }
 
+/**
+ * @ignore
+ */
 Counts.prototype.incInvalid = function () { 
     this.invalid += 1; 
 };
 
+/**
+ * @ignore
+ */
 Counts.prototype.incPass = function () { 
     this.pass += 1; 
 };
 
+/**
+ * @ignore
+ */
 Counts.prototype.newResult = function (prop, tags, distr) {
     if (this.pass > 0) {
         return new Pass(prop, this, tags, distr);
@@ -273,11 +377,16 @@ function declare(name, gens, body) {
     return theProp;
 }
 
+/**
+ * deletes all declared properties
+ */
 function resetProps() {
     allProps = [];
 }
 
-
+/**
+ * @class
+ */
 function Case(args) {
     this.tags = [];
     this.collected = [];
@@ -320,12 +429,24 @@ Case.prototype.noteArg = function (arg) {
     this.args.push(arg);
 };
 
+/**
+ * Testing Configuration.
+ *
+ * @param pass maximum passes per property
+ * @param invalid maximum invalid tests per property
+ * @param maxShrink maximum number of shrinking steps per property
+ *
+ * @class
+ */
 function Config(pass, invalid, maxShrink) {
     this.maxPass = pass;
     this.maxInvalid = invalid;
     this.maxShrink = arguments.length < 3 ? 3 : maxShrink;
 }
 
+/**
+ * @ignore
+ */
 Config.prototype.needsWork = function (count) {
     return count.invalid < this.maxInvalid &&
         count.pass < this.maxPass;
@@ -374,7 +495,7 @@ function shrinkLoop(config, prop, size, args) {
 }
 
 function runProp(config, prop) {
-    var counts = new Counts(0, 0);
+    var counts = new Counts();
     var size = 0;
 
     var tags = {};
@@ -449,6 +570,9 @@ function runAllProps(config, listener) {
 }
 
 // generic 'console' listener. When overwriting implement log and warn
+/**
+ * @class
+ */
 function ConsoleListener(maxCollected) {
     this.maxCollected = maxCollected || -1;
 }
@@ -505,7 +629,12 @@ ConsoleListener.prototype.done = function (result) {
     this.log('done.');
 };
 
-// A listener which works with Firebug's console.
+/**
+ * QuickCheck callback for FireBug sending property results to FireBug's console
+ *
+ * @extends ConsoleListener
+ * @class
+ */
 function FBCListener(maxCollected) { 
     this.maxCollected = maxCollected || 0;
 }
@@ -517,6 +646,12 @@ FBCListener.prototype.warn = function (str) {
     console.warn(str); 
 };
 
+/**
+ * QuickCheck callback for Rhino sending property results to stdout.
+ *
+ * @extends ConsoleListener
+ * @class
+ */
 function RhinoListener(maxCollected) {
     this.maxCollected = maxCollected || 10;
 }
