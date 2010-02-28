@@ -167,6 +167,9 @@ function Prop(name, gens, body) {
     this.body = body;
 }
 
+/**
+ * @private
+ */
 Prop.prototype.generateArgs = function (size) {
     var i;
     var args = [];
@@ -177,6 +180,9 @@ Prop.prototype.generateArgs = function (size) {
     return args;
 };
 
+/**
+ * @private
+ */
 Prop.prototype.generateShrinkedArgs = function(size, args) {
     //test if at least on generator supports shrinking
     var shrinkingSupported = false;
@@ -249,57 +255,86 @@ Prop.prototype.generateShrinkedArgs = function(size, args) {
 }
 
 Prop.prototype.run = function (config) {
-    runProp(config, this);
+    var stats = new Stats();
+    var size = 0;
+
+    var collected = [];
+
+    while (config.needsWork(stats)) {
+        var args = this.generateArgs(size);
+        var testCase = new Case(args);
+        try {
+            this.body.apply(this, [testCase].concat(args));
+            stats.incPass();
+        }
+        catch (e) {
+            if (e === "AssertFailed") {
+                var dist = !testCase.collected || 
+                            testCase.collected.length == 0 ?  null : 
+                                new Distribution(testCase.collected);
+
+                var shrinkedArgs = shrinkLoop(config, this, size, args);
+                return new Fail(this, stats, args, shrinkedArgs, testCase.tags, dist);
+            } else if (e === "InvalidCase") {
+                stats.incInvalid();
+            } else {
+                throw (e);
+            }
+        }
+        size += 1;
+        stats.addTags(testCase.tags);
+        collected = collected.concat(testCase.collected);
+    }
+
+    if(collected.length > 0)
+    stats.collected = !collected || collected.length == 0 ? null :
+                        new Distribution(collected);
+
+    return stats.newResult(this);
 }
 
 /**
  * @class
  */
-function Invalid(prop, counts, tags, distr) {
+function Invalid(prop, stats) {
     /** @field */
     this.status = "invalid";
 
     this.prop = prop;
-    this.counts = counts;
+    this.stats = stats;
     this.name = prop.name;
-    this.tags = tags;
-    this.distr = distr;
 }
 
 Invalid.prototype.toString = function () {
-    return "Invalid (" + this.name + ") counts=" + this.counts;
+    return "Invalid (" + this.name + ") counts=" + this.stats;
 }
 
 /**
  * @class
  */
-function Pass(prop, counts, tags, distr) {
+function Pass(prop, stats) {
     /** @field */
     this.status = "pass";
 
-    this.tags = tags;
     this.prop = prop;
-    this.counts = counts;
+    this.stats = stats;
     this.name = prop.name;
-    this.distr = distr;
 }
 
 Pass.prototype.toString = function () {
-    return "Pass (" + this.name + ") counts=" + this.counts;
+    return "Pass (" + this.name + ") counts=" + this.stats;
 }
 
 /**
  * @class
  */
-function Fail(prop, counts, failedCase, shrinkedArgs, tags, distr) {
+function Fail(prop, stats, failedCase, shrinkedArgs) {
     this.status = "fail";
-    this.tags = tags;
     this.prop = prop;
-    this.counts = counts;
+    this.stats = stats;
     this.failedCase = failedCase;
     this.shrinkedArgs = shrinkedArgs;
     this.name = prop.name;
-    this.distr = distr;
 }
 
 Fail.prototype.toString = function () {
@@ -317,8 +352,8 @@ Fail.prototype.toString = function () {
         return arg == null ? "" : "\nminCase: " + arg;
     }
 
-    return this.name + tagstr(this.tags) +
-           " failed with: counts=" + this.counts + 
+    return this.name + tagstr(this.stats.tags) +
+           " failed with: counts=" + this.stats + 
            " failedCase: " + this.failedCase +
            shrinkstr(this.shrinkedArgs);
 }
@@ -328,7 +363,7 @@ Fail.prototype.toString = function () {
  *
  * @class
  */
-function Counts() {
+function Stats() {
     /** 
      * number of successful tests
      * @field 
@@ -340,34 +375,63 @@ function Counts() {
      * @field 
      * */
     this.invalid = 0;
+
+    /**
+     * @field
+     */
+    this.tags = [];
+
+    /**
+     * @field
+     */
+    this.collected = null;
 }
 
 /**
  * @ignore
  */
-Counts.prototype.incInvalid = function () { 
+Stats.prototype.incInvalid = function () { 
     this.invalid += 1; 
 };
 
 /**
  * @ignore
  */
-Counts.prototype.incPass = function () { 
+Stats.prototype.incPass = function () { 
     this.pass += 1; 
 };
 
 /**
  * @ignore
  */
-Counts.prototype.newResult = function (prop, tags, distr) {
+Stats.prototype.addTags = function(ts) {
+    for (var i = 0; i < ts.length; i++) {
+        var tag = ts[i];
+        var found = false;
+        for (var j = 0; j < this.tags.length; j++) {
+            if(this.tags[j][1] == tag) {
+                found = true;
+                this.tags[j][0] += 1;
+            }
+        }
+        if(!found) {
+            this.tags.push([1, tag]);
+        }
+    }
+}
+
+/**
+ * @ignore
+ */
+Stats.prototype.newResult = function (prop) {
     if (this.pass > 0) {
-        return new Pass(prop, this, tags, distr);
+        return new Pass(prop, this);
     } else {
-        return new Invalid(prop, this, tags, distr);
+        return new Invalid(prop, this);
     }
 };
 
-Counts.prototype.toString = function () {
+Stats.prototype.toString = function () {
     return "(pass=" + this.pass + ", invalid=" + this.invalid + ")";
 }
 
@@ -494,57 +558,6 @@ function shrinkLoop(config, prop, size, args) {
     return failedArgs.length === 0 ? null : failedArgs[0];
 }
 
-function runProp(config, prop) {
-    var counts = new Counts();
-    var size = 0;
-
-    var tags = {};
-    var collected = [];
-
-    while (config.needsWork(counts)) {
-        var args = prop.generateArgs(size);
-        var testCase = new Case(args);
-        try {
-            prop.body.apply(prop, [testCase].concat(args));
-            counts.incPass();
-        }
-        catch (e) {
-            if (e === "AssertFailed") {
-                var dist = !testCase.collected || 
-                            testCase.collected.length == 0 ?  null : 
-                                new Distribution(testCase.collected);
-
-                var shrinkedArgs = shrinkLoop(config, prop, size, args);
-                return new Fail(prop, counts, args, shrinkedArgs, testCase.tags, dist);
-            } else if (e === "InvalidCase") {
-                counts.incInvalid();
-            } else {
-                throw (e);
-            }
-        }
-        size += 1;
-        collected = collected.concat(testCase.collected);
-        for(var i = 0; i < testCase.tags.length; i++) {
-            var tag = testCase.tags[i];
-            if (!tags[tag]) {
-                tags[tag] = 1;
-            } else {
-                tags[tag] += 1;
-            }
-        }
-    }
-
-    if(collected.length > 0)
-    var dist = !collected || collected.length == 0 ? null :
-                new Distribution(collected);
-    var tagsTmp = new Array();
-    for(var tag in tags) {
-        tagsTmp.push([tags[tag], tag]);
-    }
-
-    return counts.newResult(prop, tagsTmp, dist);
-}
-
 function runAllProps(config, listener) {
     var i = 0;
 
@@ -556,7 +569,7 @@ function runAllProps(config, listener) {
                 return;
             }
             var currentProp = allProps[i];
-            var result = runProp(config, currentProp);
+            var result = currentProp.run(config);
             listener.noteResult(result);
             i += 1;
             setTimeout(once, 0);
@@ -564,7 +577,7 @@ function runAllProps(config, listener) {
         once();
     } else {
         for (; i < allProps.length; i++) {
-            listener.noteResult(runProp(config, allProps[i]));
+            listener.noteResult(allProps[i].run(config));
         }
     }
 }
@@ -592,7 +605,7 @@ ConsoleListener.prototype.noteResult = function (result) {
     }
 
     //print tags
-    var tags = result.tags;
+    var tags = result.stats.tags;
     if(tags && tags.length > 0) {
         this.log('tags:');
         for(var i = 0; i < tags.length;i++) {
@@ -606,8 +619,8 @@ ConsoleListener.prototype.noteResult = function (result) {
     }
 
     //print histogram statistics if present
-    if(this.maxCollected != 0 && result.distr && result.distr.length > 0) {
-        var distr = result.distr;
+    if(this.maxCollected != 0 && result.stats.collected && result.stats.collected.length > 0) {
+        var distr = result.stats.collected;
         distr = distr.data.slice(
             0, this.maxCollected == -1 ? distr.data.length :
                Math.min(distr.data.length, this.maxCollected));

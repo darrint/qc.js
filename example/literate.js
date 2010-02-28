@@ -29,8 +29,8 @@ LiterateListener.prototype.log = function(text) {
 };
 
 LiterateListener.prototype.logResult = function(result) {
-    this.log("passes: " + result.counts.pass);
-    this.log("invalid: " + result.counts.invalid);
+    this.log("passes: " + result.stats.pass);
+    this.log("invalid: " + result.stats.invalid);
 }
 // Given a jquery identifier, run the code in the element and display
 // results in an helpful manner near the code.
