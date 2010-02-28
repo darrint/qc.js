@@ -874,3 +874,66 @@ function failOnException(fn) {
     }
 }
 
+var arbDate = {
+    arb: function() { return new Date(); }
+}
+
+function arbConst(/** values... */){
+    var d = Distribution.uniform(arguments);
+    return {
+        arb: function(){ return d.pick(); }
+    }
+}
+
+function arbMod(a, fn) {
+    return {
+        arb: function(size) {
+            return fn(genvalue(a, size));
+        }
+    }
+}
+
+var arbChar = arbMod(arbChoose(arbRange(32,255)),
+                     function(num) {
+                         return String.fromCharCode(num);
+                     });
+
+var arbString = new function() {
+    var a = arbArray(arbRange(32,255));
+
+    this.arb = function(size) {
+        var tmp = genvalue(a, size);
+        return String.fromCharCode.apply(String, tmp);
+    }
+
+    this.shrink = function(size, str) {
+        var tmp = new Array(str.length);
+        for(var i = 0; i < str.length; i++) {
+            tmp[i] = str.charCodeAt(i);
+        }
+
+        var tmp = genshrinked(a, size, tmp);
+        var ret = [];
+        for (var i = 0; i < tmp.length; i++) {
+            ret.push(String.fromCharCode.apply(String, tmp[i]));
+        }
+        return ret;
+    }
+
+    return this;
+}
+
+var arbUndef = arbConst(undefined);
+
+function arbUndefOr(opt) {
+    var d = new Distribution([[10, arbUndef], [90, opt]]);
+    return {
+        arb: function (size) {
+            return genvalue(d.pick(), size);
+        },
+        shrink: function(size, a) {
+            return a == undefined ? [] : genshrinked(opt, size, a);
+        }
+    }
+}
+
