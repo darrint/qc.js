@@ -184,22 +184,6 @@ Prop.prototype.generateArgs = function (size) {
  * @private
  */
 Prop.prototype.generateShrinkedArgs = function(size, args) {
-    //test if at least on generator supports shrinking
-    var shrinkingSupported = false;
-    for (var i = 0; i < this.gens.length; i++) {
-        var gen = this.gens[i];
-        if(!(gen instanceof Function) && 
-           !(gen['shrink'] === null || gen['shrink'] === undefined)) 
-        {
-            shrinkingSupported = true;
-            break;
-        }
-    }
-
-    if(!shrinkingSupported) {
-        return [];
-    }
-
     // create shrinked args for each argument 
     var shrinked = [];
     var countShrinked = 0;
