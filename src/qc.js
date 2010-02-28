@@ -849,7 +849,7 @@ function arbArray(innerGen, shrinkStrategy) {
 function expectException(fn) {
     return function(c){
         try {
-            fn.apply(arguments);
+            fn.apply(this, arguments);
         } catch (e) {
             if(e === 'AssertFailed' || e === 'InvalidCase') {
                 throw e;
