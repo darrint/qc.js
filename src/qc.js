@@ -248,7 +248,7 @@ Prop.prototype.generateShrinkedArgs = function(size, args) {
     return newArgs;
 }
 
-Prop.prototype.run(config) {
+Prop.prototype.run = function (config) {
     runProp(config, this);
 }
 
