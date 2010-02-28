@@ -861,3 +861,16 @@ function expectException(fn) {
     }
 }
 
+function failOnException(fn) {
+    return function(c) {
+        try {
+            fn.apply(this, arguments);
+        } catch (e) {
+            if(e === 'AssertFailed' || e === 'InvalidCase') {
+                throw e;
+            }
+            c.assert(false);
+        }
+    }
+}
+
