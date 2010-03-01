@@ -834,7 +834,7 @@ function arbRange(a, b) {
     var min = Math.min(a, b);
     var max = Math.max(a, b);
     return function (size) {
-        return Math.floor(Math.random() * (max - min)) - min;
+        return Math.floor(Math.random() * (max - min)) + min;
     };
 }
 
