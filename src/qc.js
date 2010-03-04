@@ -610,14 +610,14 @@ ConsoleListener.prototype.noteResult = function (result) {
         status_string = result.status + ": " + result.name;
 
     if (result.status === "pass") {
-        this.log(result);
+        this.passed(result);
         //this.log(result.counts);
     } else {
-        this.warn(status_string);
+        this.invalid(status_string);
         this.log(result);
     }
     if (result.status === "fail") {
-        this.log("Failed case:");
+        this.failure("Failed case:");
         this.log(result.failedCase);
     }
 
@@ -669,12 +669,18 @@ function FBCListener(maxCollected) {
     this.maxCollected = maxCollected || 0;
 }
 FBCListener.prototype = new ConsoleListener();
-FBCListener.prototype.log = function (str) { 
-    console.log(str); 
-};
-FBCListener.prototype.warn = function (str) { 
+FBCListener.prototype.passed = function (str) {
+    console.log(str);
+}
+FBCListener.prototype.invalid = function (str) { 
     console.warn(str); 
 };
+FBCListener.prototype.failure = function (str) { 
+    console.error(str); 
+};
+FBCListener.prototype.log = function (str) {
+    console.log(str);
+}
 
 /**
  * QuickCheck callback for Rhino sending property results to stdout.
@@ -689,9 +695,15 @@ RhinoListener.prototype = new ConsoleListener();
 RhinoListener.prototype.log = function (str) { 
     print(str.toString()); 
 };
-RhinoListener.prototype.warn = function (str) { 
-    print(str.toString()); 
-};
+RhinoListener.prototype.passed = function (str) {
+    print('\033[32m' + str.toString() + '\033[0m');
+}
+RhinoListener.prototype.invalid = function (str) {
+    print('\033[33m' + str.toString() + '\033[0m');
+}
+RhinoListener.prototype.failure = function (str) {
+    print('\033[31m' + str.toString() + '\033[0m');
+}
 
 // some starter generators and support utilities.
 
