@@ -1,69 +1,70 @@
-<!DOCTYPE html>
-<head>
-<title>Basic Use of qc.js</title>
-<link rel="stylesheet" type="text/css" href="qcjsdoc.css">
-<script src="../src/qc.js"></script>
+<html>
+    <head>
+        <title>Basic Use of qc.js</title>
+        <link rel="stylesheet" type="text/css" href="qcjsdoc.css">
+        <script src="../../src/qc.js"></script>
 
-<script src="http://www.google.com/jsapi"></script>
-<script>
-google.load("jquery", "1.3");
-google.setOnLoadCallback(function() {
-    $(document).ready(function() { runAllLiterate() });
-    });
-</script>
-<script src="literate.js"></script>
-</head>
-<body>
-<h2>Defining a basic property and checking it.</h2>
-<p>
-The core ethic of what we are doing with qc.js is coming up with
-"properties" our code should have and verifying that those properties
-actually hold in practice.
+        <script src="http://www.google.com/jsapi"></script>
+        <script>
+            google.load("jquery", "1.3");
+            google.setOnLoadCallback(function() {
+                $(document).ready(function() { runAllLiterate() });
+            });
+        </script>
+        <script src="literate.js"></script>
+    </head>
+    <body>
+        <h1>Defining a basic property and checking it.</h1>
+        <p>
+        The core ethic of what we are doing with qc.js is coming up with
+        "properties" our code should have and verifying that those properties
+        actually hold in practice.
 
-Let's start with an example. Let's make a function that "intensifies"
-a number by 2.
+        Let's start with an example. Let's make a function that "intensifies"
+        a number by 2.
 
-So if the function got a 7, the function would yield 9. If the
-function got a -3, it would return -5.
+        So if the function got a 7, the function would yield 9. If the
+        function got a -3, it would return -5.
 
-We'll start with with an implementation that is obviously wrong. We'll
-define a qc.js property to check out some cases.
-</p>
+        We'll start with with an implementation that is obviously wrong. We'll
+        define a qc.js property to check out some cases.
+        </p>
 
-<p class="code runme" id="negative-bad">
-function intensify(n) {
-    return n + 2;
-}
+        <p class="code runme" id="negative-bad">
+        function intensify(n) {
+            return n + 2;
+        }
 
-declare("intensify grows by 2", [arbInt],
-        function(c, a) {
-            var result = intensify(a);
-            c.noteArg(result);
-            c.assert(Math.abs(a) + 2 == Math.abs(result));
-        });
-</p>
+        declare("intensify grows by 2", [arbInt],
+            function(c, a) {
+                var result = intensify(a);
+                c.noteArg(result);
+                c.assert(Math.abs(a) + 2 == Math.abs(result));
+            });
+        </p>
 
-<p>
-Obviously that was going to fail and as we saw, negative numbers trip
-up our very naive implementation of intensify. So what happens if we
-do a better job?
-</p>
+        <p>
+        Obviously that was going to fail and as we saw, negative numbers trip
+        up our very naive implementation of intensify. So what happens if we
+        do a better job?
+        </p>
 
-<p class="code runme" id="intensify-pass">
-function intensify(n) {
-    if (n > 0) {
-        return n + 2;
-    } else {
-        return n - 2;
-    }
-}
+        <p class="code runme" id="intensify-pass">
+        function intensify(n) {
+            if (n > 0) {
+                return n + 2;
+            } else {
+                return n - 2;
+            }
+        }
 
-declare("intensify grows by 2", [arbInt],
-        function(c, a) {
-            var result = intensify(a);
-            c.noteArg(result);
-            c.assert(Math.abs(a) + 2 == Math.abs(result));
-        });
-</p>
+        declare("intensify grows by 2", [arbInt],
+            function(c, a) {
+                var result = intensify(a);
+                c.noteArg(result);
+                c.assert(Math.abs(a) + 2 == Math.abs(result));
+            });
+        </p>
 
-</body>
+    </body>
+</html>
