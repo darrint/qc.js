@@ -3,7 +3,7 @@
 // Tiny javascript quickcheck port.
 
 /**
- * Array of all declared properties
+ * Array of all declared/registered properties
  */
 var allProps = [];
 
@@ -32,14 +32,21 @@ Invalid.prototype.toString = function () {
 };
 
 /**
+ * Report class for successful tested properties.
+ *
  * @class
  */
 function Pass(prop, stats) {
-    /** @field */
+    /** status = "pass" */
     this.status = "pass";
 
+    /** the property this object was build for.*/
     this.prop = prop;
+
+    /** property run statistics.*/
     this.stats = stats;
+
+    /** The property its name.*/
     this.name = prop.name;
 }
 
@@ -85,7 +92,9 @@ Fail.prototype.toString = function () {
 };
 
 /**
- * Counting class for collection a properties non failing pass/invalid runs.
+ * Statistics class for counting number of pass/invalid runs, building
+ * histograms and other statistics for reporting a property its testing
+ * results.
  *
  * @class
  */
@@ -292,18 +301,20 @@ function genvalue(gen, size) {
 }
 
 /**
- * Uses the generators specific shrinking method to shrink a value the generator
- * created before. If the generator is a function or has no method named 'shrink' 
- * or the objects field 'shrink' is set to null, no shrinking will be done.
- * If a shrinking method is defined, this method is called with the original seed and
- * value the generator created. The shrinking method is supposed to return an Array of
- * shrinked(!) values or null,undefined,[] if no shrinked values could have been created.
+ * Uses the generators specific shrinking method to shrink a value the
+ * generator created before. If the generator is a function or has no method
+ * named 'shrink' or the objects field 'shrink' is set to null, no shrinking
+ * will be done.  If a shrinking method is defined, this method is called with
+ * the original seed and value the generator created. The shrinking method is
+ * supposed to return an Array of shrinked(!) values or null,undefined,[] if 
+ * no shrinked values could have been created.
  *
  * @param gen the generator object
  * @param size the initial seed used when creating a value
  * @param arg the value the generator created for testing
  *
- * @return an array of shrinked values or [] if no shrinked values were generated.
+ * @return an array of shrinked values or [] if no shrinked values were
+ *         generated.
  *
  */
 function genshrinked(gen, size, arg) {
@@ -318,6 +329,14 @@ function genshrinked(gen, size, arg) {
 }
 
 /**
+ * Creates a new Property with given argument generators and a testing 
+ * function. For each generator in the gens array a value is generated, 
+ * so for testing a 2-ary function the gens array must contain 2 generators.
+ *
+ * @param {String} name the property its name
+ * @param {Array} gens array of generators to draw arguments from
+ * @param {Function} body property test function.
+ *
  * @class
  */
 function Prop(name, gens, body) {
@@ -354,7 +373,9 @@ Prop.prototype.generateShrinkedArgs = function (size, args) {
             shrinked.push([args[i]]);
         } else {
             tmp = gen.shrink(size, args[i]);
-            if (tmp === undefined || (tmp instanceof Array && tmp.length === 0)) {
+            if (tmp === undefined || 
+                (tmp instanceof Array && tmp.length === 0)) 
+            {
                 shrinked.push([args[i]]);
             } else {
                 countShrinked++;
@@ -396,6 +417,10 @@ Prop.prototype.generateShrinkedArgs = function (size, args) {
 };
 
 /**
+ * The Test Case class generated every time a property is tested.
+ * An instance of Case is always passed as first argument to a property's
+ * testing function so users can control the test case's properties.
+ *
  * @class
  */
 function Case(args) {
@@ -404,24 +429,46 @@ function Case(args) {
     this.args = args;
 }
 
+/**
+ * tests and notifies QuickCheck if a property fails or not.
+ *
+ * @param bool pass false, if property failed
+ */
 Case.prototype.assert = function (bool) {
     if (!bool) {
         throw ("AssertFailed");
     }
 };
 
+/**
+ * used to test if input is good for testing the property.
+ *
+ * @param bool pass false to mark property as invalid for given input.
+ */
 Case.prototype.guard = function (bool) {
     if (!bool) {
         throw ("InvalidCase");
     }
 };
 
+/**
+ * Adds a tag to a test run.
+ *
+ * @param bool if true tag is added to case, else not
+ * @param tag value to add
+ */
 Case.prototype.classify = function (bool, tag) {
     if (bool) {
         this.tags.push(tag);
     }
 };
 
+/**
+ * collect builds a histogram of all collected values for all runs of the
+ * property. 
+ *
+ * @param value value to collect
+ */
 Case.prototype.collect = function (value) {
     var i, found = false;
     for (i = 0; i < this.collected.length; i++) {
@@ -436,8 +483,14 @@ Case.prototype.collect = function (value) {
     }
 };
 
-Case.prototype.noteArg = function (arg) {
-    this.args.push(arg);
+/**
+ * adds the given value to the test case its values for reporting in case of
+ * failure.
+ *
+ * @param value the value to add
+ */
+Case.prototype.noteArg = function (value) {
+    this.args.push(value);
 };
 
 /**
@@ -459,7 +512,8 @@ function shrinkLoop(config, prop, size, args) {
             return failedArgs.length === 0 ? null : failedArgs[0];
         }
 
-        // create new failed arguments from shrinked ones by running the property
+        // create new failed arguments from shrinked ones by running the
+        // property
         failedArgs = [];
         for (i = 0; i < shrinkedArgs.length; i++) {
             try {
@@ -507,7 +561,8 @@ Prop.prototype.run = function (config) {
                             new Distribution(testCase.collected);
 
                 shrinkedArgs = shrinkLoop(config, this, size, args);
-                return new Fail(this, stats, args, shrinkedArgs, testCase.tags, dist);
+                return new Fail(this, stats, args, shrinkedArgs, 
+                                testCase.tags, dist);
             } else if (e === "InvalidCase") {
                 stats.incInvalid();
             } else {
@@ -530,8 +585,9 @@ Prop.prototype.run = function (config) {
  *
  *
  * @param name the property's name
- * @param gens Array of generators (length == arity of body function).  Entry
- *             at position i will drive the i-th argument of the body function. 
+ * @param gens Array of generators (length == arity of body function). The
+ *             Entry at position i will drive the i-th argument of the body
+ *             function.
  * @param body the properties testing function
  *
  * @return a new registered Property object.
@@ -595,9 +651,16 @@ function runAllProps(config, listener) {
 // generic 'console' listener. When overwriting implement log and warn
 /**
  * Abstract class for building 'console' based listeners.
- * Subclasses MUST implement the function 'log' and 'warn'.
+ * Subclasses MUST implement the functions:
+ * <ul>
+ *   <li>passed</li>
+ *   <li>invalid</li>
+ *   <li>log</li>
+ *   <li>failure</li>
+ * </ul>
  *
- * @param maxCollected maximum number of collected elements to display in console
+ * @param maxCollected maximum number of collected elements to display in
+ *                     console
  *
  * @class
  */
@@ -605,6 +668,11 @@ function ConsoleListener(maxCollected) {
     this.maxCollected = maxCollected || -1;
 }
 
+/**
+ * Callback to be called for every tested property.
+ *
+ * @param result a property its test result (Pass, Invalid, Failure)
+ */
 ConsoleListener.prototype.noteResult = function (result) {
     var i, tags, tag, distr, d,
         status_string = result.status + ": " + result.name;
@@ -636,7 +704,10 @@ ConsoleListener.prototype.noteResult = function (result) {
     }
 
     //print histogram statistics if present
-    if (this.maxCollected !== 0 && result.stats.collected && result.stats.collected.length > 0) {
+    if (this.maxCollected !== 0 && 
+        result.stats.collected && 
+        result.stats.collected.length > 0)
+    {
         distr = result.stats.collected;
         distr = distr.data.slice(
             0, this.maxCollected === -1 ? distr.data.length :
@@ -655,12 +726,52 @@ ConsoleListener.prototype.noteResult = function (result) {
 
 };
 
+/**
+ * Callback to notify listener that testing all properties finished.
+ */
 ConsoleListener.prototype.done = function (result) {
     this.log('done.');
 };
 
 /**
- * QuickCheck callback for FireBug sending property results to FireBug's console
+ * MUST BE IMPLEMENTED BY SUBCLASSES.
+ * Used by the ConsoleListener to print a message.
+ * @param msg the message to print
+ */
+ConsoleListener.prototype.log = function(msg) {
+    throw("to be implemented by subclass");
+}
+
+/**
+ * MUST BE IMPLEMENTED BY SUBCLASSES.
+ * Print a pass message.
+ * @param msg the message to print
+ */
+ConsoleListener.prototype.passed = function(msg) {
+    throw("to be implemented by subclass");
+}
+
+/**
+ * MUST BE IMPLEMENTED BY SUBCLASSES.
+ * Print an invalid property message.
+ * @param msg the message to print
+ */
+ConsoleListener.prototype.invalid = function(msg) {
+    throw("to be implemented by subclass");
+}
+
+/**
+ * MUST BE IMPLEMENTED BY SUBCLASSES.
+ * Print a failure message.
+ * @param msg the message to print
+ */
+ConsoleListener.prototype.failure = function(msg) {
+    throw("to be implemented by subclass");
+}
+
+/**
+ * QuickCheck callback for FireBug sending property results to FireBug's
+ * console
  *
  * @extends ConsoleListener
  * @class
@@ -696,12 +807,15 @@ RhinoListener.prototype.log = function (str) {
     print(str.toString()); 
 };
 RhinoListener.prototype.passed = function (str) {
+    //print message in green
     print('\033[32m' + str.toString() + '\033[0m');
 }
 RhinoListener.prototype.invalid = function (str) {
+    //print message in yellow
     print('\033[33m' + str.toString() + '\033[0m');
 }
 RhinoListener.prototype.failure = function (str) {
+    //print message in red
     print('\033[31m' + str.toString() + '\033[0m');
 }
 
@@ -738,6 +852,9 @@ function randFloatUnit() {
 }
 
 /**
+ * Passes the size 'seed' argument use to drive generators directly to the
+ * property its test function.
+ *
  * @constant
  */
 var justSize = {
@@ -758,6 +875,20 @@ function arbChoose(/** generators... */) {
 }
 
 /**
+ * Generator builder. The created generator will always return the given
+ * constant value.
+ */
+function arbConst(/** values... */) {
+    var d = Distribution.uniform(arguments);
+    return {
+        arb: function () { return d.pick(); }
+    };
+}
+
+
+/**
+ * Boolean value generator. Generates true or false by 50:50 chance.
+ *
  * @constant
  */
 var arbBool = {
@@ -765,16 +896,16 @@ var arbBool = {
 };
 
 /**
+ * Null generator. Always generates 'null'.
+ *
  * @constant
  */
-var arbNull = {
-    arb: function () { 
-            return null; 
-        },
-    shrink: null
-};
+var arbNull = arbConst(null);
 
 /**
+ * Integer value generator. All generated values are >= 0.<br/>
+ * Supports shrinking.
+ *
  * @constant
  */
 var arbWholeNum = {
@@ -792,6 +923,9 @@ var arbWholeNum = {
 };
 
 /**
+ * Integer value generator.  <br/>
+ * Supports shrinking.
+ *
  * @constant
  */
 var arbInt = {
@@ -816,6 +950,10 @@ var arbInt = {
 };
 
 /**
+ * Float value generator. Generates a floating point value in between 0.0 and
+ * 1.0. <br/>
+ * Supports shrinking.
+ *
  * @constant
  */
 var arbFloatUnit = {
@@ -862,6 +1000,10 @@ function arbNullOr(otherGen) {
     };
 }
 
+/**
+ * Array shrinking strategy. Will build new Arrays by removing one element 
+ * from given array.
+ */
 function arrShrinkOne(size, arr) {
     if (!arr || arr.length === 0) return [];
     if (arr.length === 1) return [[]];
@@ -884,6 +1026,14 @@ function arrShrinkOne(size, arr) {
     return ret;
 }
 
+/**
+ * Array generator. Generates array of arbitrary length with given generator.
+ *
+ * @param {Generator} innerGen the generator create the resulting array its
+ *                    values from
+ * @param [shrinkStrategy] optional shrinking strategy. Default is
+ *        'arrShrinkOne'
+ */
 function arbArray(innerGen, shrinkStrategy) {
     function gen(size) {
         var i, list = [],
@@ -897,6 +1047,11 @@ function arbArray(innerGen, shrinkStrategy) {
     return { arb: gen, shrink: shrinkStrategy || arrShrinkOne };
 }
 
+/**
+ * Property test function modifier. Using this modifier, it is assumed that 
+ * the testing function will throw an exception and if not the property will
+ * fail.
+ */
 function expectException(fn) {
     return function (c) {
         try {
@@ -912,6 +1067,11 @@ function expectException(fn) {
     };
 }
 
+/**
+ * Property test function modifier. Instead of finishing testing when an
+ * unexpected exception is thrown, the offending property is marked as failure
+ * and QuickCheck will continue.
+ */
 function failOnException(fn) {
     return function (c) {
         try {
@@ -926,6 +1086,9 @@ function failOnException(fn) {
 }
 
 /**
+ * Date value generator. Always generates a new Date object by calling 
+ * 'new Date()'.
+ *
  * @constant
  */
 var arbDate = {
@@ -933,13 +1096,6 @@ var arbDate = {
         return new Date(); 
     }
 };
-
-function arbConst(/** values... */) {
-    var d = Distribution.uniform(arguments);
-    return {
-        arb: function () { return d.pick(); }
-    };
-}
 
 function arbMod(a, fn) {
     return {
@@ -950,14 +1106,21 @@ function arbMod(a, fn) {
 }
 
 /**
+ * Character value generator.
+ * Will generate any character with char code in range 32-255.
+ *
  * @constant
  */
-var arbChar = arbMod(arbChoose(arbRange(32, 255)),
+var arbChar = arbMod(arbRange(32, 255),
                      function (num) {
                          return String.fromCharCode(num);
                      });
 
 /**
+ * String value generator. All characters in the generated String
+ * are in range 32-255.<br/>
+ * Supports shrinking.
+ *
  * @constant
  */
 var arbString = new function () {
@@ -986,6 +1149,8 @@ var arbString = new function () {
 };
 
 /**
+ * 'undefined' generator. Always generates 'undefined'.
+ *
  * @constant
  */
 var arbUndef = arbConst(undefined);
@@ -997,7 +1162,9 @@ function arbUndefOr(opt) {
             return genvalue(d.pick(), size);
         },
         shrink: function (size, a) {
-            return a === undefined || a === null ? [] : genshrinked(opt, size, a);
+            return a === undefined || a === null ? 
+                       [] : 
+                       genshrinked(opt, size, a);
         }
     };
 }
