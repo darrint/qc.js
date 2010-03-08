@@ -21,7 +21,20 @@ JS Quickcheck Features
 TODO:
 =====
 - start some kind of documentation
-- add jsdoc toolkit markup for API documentation
+
+Build Documentation:
+====================
+In order to build the documentation you will need:
+- jsdoc toolkit (http://code.google.com/p/jsdoc-toolkit/). 
+  It is recommended to set the JSDOCDIR environment variable
+- jsdoc simple template (http://github.com/urso/jsdoc-simple):
+  just copy 'jsdoc-simple' directory to jsdoc toolkit's template directory
+- pandoc:
+  used to preprocess statis documentation files. Alternatively you can use any
+  other markdown preprocessor and update jsdoc.conf to use that preprocessor
+  instead of pandoc.
+- run './mkdoc' shell command (needs *nix shell).
+
 
 qc.js was originally written by Darrin Thompson with extensive contributions
 from Steffen Siering.
