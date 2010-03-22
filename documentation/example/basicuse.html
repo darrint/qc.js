@@ -30,18 +30,18 @@
         define a qc.js property to check out some cases.
         </p>
 
-        <p class="code runme" id="negative-bad">
-        function intensify(n) {
-            return n + 2;
-        }
+        <code class="code runme" id="negative-bad">
+function intensify(n) {
+    return n + 2;
+}
 
-        declare("intensify grows by 2", [arbInt],
-            function(c, a) {
-                var result = intensify(a);
-                c.noteArg(result);
-                c.assert(Math.abs(a) + 2 == Math.abs(result));
-            });
-        </p>
+declare("intensify grows by 2", [arbInt],
+    function(c, a) {
+        var result = intensify(a);
+        c.noteArg(result);
+        c.assert(Math.abs(a) + 2 == Math.abs(result));
+    });
+        </code>
 
         <p>
         Obviously that was going to fail and as we saw, negative numbers trip
@@ -49,22 +49,22 @@
         do a better job?
         </p>
 
-        <p class="code runme" id="intensify-pass">
-        function intensify(n) {
-            if (n > 0) {
-                return n + 2;
-            } else {
-                return n - 2;
-            }
-        }
+        <code class="code runme" id="intensify-pass">
+function intensify(n) {
+    if (n > 0) {
+        return n + 2;
+    } else {
+        return n - 2;
+    }
+}
 
-        declare("intensify grows by 2", [arbInt],
-            function(c, a) {
-                var result = intensify(a);
-                c.noteArg(result);
-                c.assert(Math.abs(a) + 2 == Math.abs(result));
-            });
-        </p>
+declare("intensify grows by 2", [arbInt],
+    function(c, a) {
+        var result = intensify(a);
+        c.noteArg(result);
+        c.assert(Math.abs(a) + 2 == Math.abs(result));
+    });
+        </code>
 
     </body>
 </html>
